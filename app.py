@@ -9,6 +9,7 @@ import io
 import logging
 from flask_cors import CORS
 from datetime import datetime
+from features_extraction_to_csv import main
 
 app = Flask(__name__)
 CORS(app)
@@ -24,15 +25,23 @@ if not os.path.exists(path_photos_from_camera):
 # Define logging configuration
 logging.basicConfig(level=logging.INFO)
 
+@app.route('/api/hello', methods=['GET'])
+def hello():
+    return jsonify({"msg": "hello"})
+
+
 @app.route('/api/capture_frame', methods=['POST'])
 def capture_frame():
     data = request.json
     image_data = data['image']
-
+    
     # Decode the base64 image data
     image_data = image_data.split(',')[1]
     image_bytes = io.BytesIO(base64.b64decode(image_data))
     image = Image.open(image_bytes)
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    print("MODE", image.mode)
     image = np.array(image)
 
     # Perform face detection
@@ -71,6 +80,7 @@ def save_face():
     try:
         cv2.imwrite(file_path, cv2.cvtColor(image, cv2.COLOR_RGB2BGR))
         logging.info(f"Saved image to: {file_path}")
+        main()
         return jsonify({'message': f'Face saved as {file_path}'})
     except Exception as e:
         logging.error(f"Error saving image: {e}")
